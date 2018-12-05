@@ -48,6 +48,8 @@ namespace ClientApp
                 // Get a client stream for reading and writing.
                 LogEvent("Initialising stream");
                 stream = tcpClient.GetStream();
+                GetListOfEntities();
+                DownloadEntity("Pies");
             }
             catch (ArgumentNullException e)
             {
@@ -87,13 +89,12 @@ namespace ClientApp
             LogEvent($"Received: {responseData}");
             return responseData;
         }
-        private bool Request(RequestActions requestActions)
+        private bool Request(RequestActions requestActions, char action)
         {
             LogEvent($"*** Requested action {requestActions.ToString()} from server ***");
-            string action = requestActions.ToString();
 
             //Send info about request
-            SendMessage(action);
+            SendMessage(action.ToString());
 
             // Receive the TcpServer.response.
             if (GetResponse().Contains("OK"))
@@ -111,14 +112,43 @@ namespace ClientApp
         #endregion
 
         #region interaction logic
-        private void DownloadEntity()
+        private void GetListOfEntities()
         {
-            if (Request(RequestActions.DownloadAnimal))
-                SendMessage("bedzie download");
+            SendMessage("l");
+            GetResponse();
+        }
+        private void DownloadEntity(string whichEntity)
+        {
+            if (Request(RequestActions.DownloadAnimal,'d'))
+            {
+                SendMessage(whichEntity);
+                if (GetResponse().Contains("OK"))
+                {
+                    //int howManyFiles = Int32.Parse(GetResponse());
+                    //Directory.CreateDirectory($"./_CacheDirectory/{whichEntity}");
+                    SendMessage("Pies");
+                    //for(int i = 0; i < howManyFiles; i++)
+                    //{
+                    //    using (var output = File.Create("result.dat"))
+                    //    {
+                    //        LogEvent($"*** Receiving a file {i+1} of {howManyFiles} ***");
+
+                    //        // read the file in chunks of 1KB
+                    //        var receivedFileBuffer = new byte[1024];
+                    //        int bytesRead;
+                    //        while ((bytesRead = stream.Read(receivedFileBuffer, 0, receivedFileBuffer.Length)) > 0)
+                    //        {
+                    //            output.Write(receivedFileBuffer, 0, bytesRead);
+                    //        }
+                    //    }
+                    //}
+                }
+            }
+            SendMessage("P");
         }
         private void UploadEntity(Entity entity)
         {
-            if (Request(RequestActions.UploadAnimal))
+            if (Request(RequestActions.UploadAnimal,'u'))
                 SendMessage("bedzie upload");
         }
         private void DisconnectButtonClick(object sender, RoutedEventArgs e)
