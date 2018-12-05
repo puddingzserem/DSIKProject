@@ -1,0 +1,15 @@
+C:\Users\Windows\source\repos\DSIKProj\client\ClientApp\ClientApp\bin\Debug\ClientApp.exe.config
+C:\Users\Windows\source\repos\DSIKProj\client\ClientApp\ClientApp\bin\Debug\ClientApp.exe
+C:\Users\Windows\source\repos\DSIKProj\client\ClientApp\ClientApp\bin\Debug\ClientApp.pdb
+C:\Users\Windows\source\repos\DSIKProj\client\ClientApp\ClientApp\obj\Debug\ClientApp.csprojAssemblyReference.cache
+C:\Users\Windows\source\repos\DSIKProj\client\ClientApp\ClientApp\obj\Debug\MainWindow.g.cs
+C:\Users\Windows\source\repos\DSIKProj\client\ClientApp\ClientApp\obj\Debug\App.g.cs
+C:\Users\Windows\source\repos\DSIKProj\client\ClientApp\ClientApp\obj\Debug\ClientApp_MarkupCompile.cache
+C:\Users\Windows\source\repos\DSIKProj\client\ClientApp\ClientApp\obj\Debug\ClientApp_MarkupCompile.lref
+C:\Users\Windows\source\repos\DSIKProj\client\ClientApp\ClientApp\obj\Debug\MainWindow.baml
+C:\Users\Windows\source\repos\DSIKProj\client\ClientApp\ClientApp\obj\Debug\ClientApp.g.resources
+C:\Users\Windows\source\repos\DSIKProj\client\ClientApp\ClientApp\obj\Debug\ClientApp.Properties.Resources.resources
+C:\Users\Windows\source\repos\DSIKProj\client\ClientApp\ClientApp\obj\Debug\ClientApp.csproj.GenerateResource.cache
+C:\Users\Windows\source\repos\DSIKProj\client\ClientApp\ClientApp\obj\Debug\ClientApp.csproj.CoreCompileInputs.cache
+C:\Users\Windows\source\repos\DSIKProj\client\ClientApp\ClientApp\obj\Debug\ClientApp.exe
+C:\Users\Windows\source\repos\DSIKProj\client\ClientApp\ClientApp\obj\Debug\ClientApp.pdb
