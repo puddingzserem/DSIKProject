@@ -8,14 +8,18 @@
 #include <arpa/inet.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <stdint.h>
 
 #define PORT 7777
+
 #define MAXQUEUE 10
 
 #pragma region Database logic
 char ok[2] = "OK";
-FILE* file;
-struct stat fileinfo;
+
+//FILE* file;
+//struct stat fileinfo;
+
 void SetDatabase (){
     printf("\n*** Requested setting a database ***\n");
     char directory [200] = "./Database";
@@ -31,7 +35,6 @@ void SetDatabase (){
     printf("Action finished\n");
     return;
 }
-
 int CreateFolder (char name []){
     printf("\n*** Requested creating a new folder ***\nFolder name: %s\n", name);
     char directory [200] = "./Database/%s";
@@ -80,8 +83,6 @@ char *ReturnListOfItems(){
     printf("Action finished\n");
     return subdirectories;
 }
-
-
 int SearchForItem (char name []){
     printf("\n*** Action: Searching database for item \"%s\" ***\n", name);
     char *items = ReturnListOfItems();
@@ -100,47 +101,198 @@ int SearchForItem (char name []){
         return -1;
     }
 }
-
-int ReturnListOfAnimals(int clientDescriptior, int clientID)
-{
+int SendListOfAnimals(int clientDescriptior, int clientID){
+    printf("\n*** Action: Send list of animals to client %d ***\n", clientID);
     long fileLength;
+    printf("Getting list of items.\n");
     char* listOfItems = ReturnListOfItems();
-    char gotowosc[2];
-	printf("%s",listOfItems);
+	printf("%s\n",listOfItems);
     if(send(clientDescriptior, listOfItems, 2048,0) != 2048)
     {
-        printf("Send listy nie powiodl sie :/\n");
+        printf("Error: Couldn't send the list. Aborting...\n");
         return -1;
     }
+    printf("List of animals successfully sent\n");
+    printf("Action finished\n");
     return 0;
 }
-
 void SendFiles(int clientDescriptior, int clientID)
 {
+    printf("\n*** Action: Send files to client %d ***\n", clientID);
+    printf("Creating buffers\n");
+    char buffer[2];
 	char name[100];
 	char *path = "./Database/";
 	memset(name,0,100);
+
+    /*OK na d*/
 	if (send(clientDescriptior, ok, sizeof(ok),0) != sizeof(ok))
 	{
-		printf("Pierwszy send nie powiodl sie");
+		printf("Error: Couldn't send confirmation to client %d. Aborting...\n", clientID);
 		return;
 	}
 	printf("Wyslano \"OK\" \n");
+
+    /*recv na zwierze*/
 	if (recv(clientDescriptior, &name, 100,0) <= 0)
 	{
 		printf("recv nie powiodl sie\n");
 		return;
 	}
 	printf("Klient chce pobrac: %s\n", name);
-	if (send(clientDescriptior, ok, sizeof(ok),0) != sizeof(ok))
+
+    /*Liczę pliki w podfolderze*/
+    char directory[100];
+    sprintf (directory, "%s%s", path, name);
+	printf("%s\n", directory);
+
+    struct dirent *de;
+	DIR *dr = opendir(directory);
+
+    if (dr == NULL) 
+    { 
+        printf("Error: Could not access folder. Aborting...\n"); 
+        return; 
+    } 
+    printf("Accessed folder\n");
+
+    int subdirectoriesCount =-2;
+
+    while ((de = readdir(dr)) != NULL){
+        subdirectoriesCount++;
+    }
+    closedir(dr);
+    printf("%d files in %s\n",subdirectoriesCount,directory);
+
+    /*Wyslij liczbe plikow*/
+
+    char subdirCount[2];
+    sprintf(subdirCount, "%d", subdirectoriesCount);
+    
+    /*printf("SIZE OF INT %ld",sizeof(int32_t));*/
+    if (send(clientDescriptior, subdirCount, 2,0) != 2)
 	{
-		printf("Trzeci send nie powiodl sie");
+		printf("Couldn't send file count\n");
 		return;
 	}
-	printf("Wyslano \"OK\" po recv \n");
-	strcat(path, name);
-	printf("test");
-	
+    else{ printf("File count sent\n"); }
+
+    /*recv ok po file count*/
+	if (recv(clientDescriptior, &buffer, 2,0) <= 0)
+	{
+		printf("recv nie powiodl sie\n");
+		return;
+	}
+	printf("Klient: %s\n", buffer);
+
+    /*Pobierz liste plikow do wysłania*/
+    /*struct dirent *de;*/
+    char pathToFiles[100];
+    sprintf(pathToFiles,"./Database/%s",name);
+	DIR *dir = opendir(pathToFiles);
+    if (dir == NULL) 
+    { 
+        printf("Error: Could not access files. Aborting...\n"); 
+        return; 
+    } 
+    printf("Accessed files\n");
+
+    char subdirectories[10][150];
+    char subdirectoryfile[150];
+    if(!subdirectories){
+        printf("Error: Cannot allocate memory for the result. Aborting...\n");
+        return;
+    }
+
+    printf("Reading results\n");
+    int fileCounter=0;
+    while ((de = readdir(dir)) != NULL){
+        strcat(subdirectories[fileCounter],pathToFiles);
+        strcat(subdirectories[fileCounter],"/");
+        strcat(subdirectories[fileCounter],de->d_name); 
+        strcat(subdirectories[fileCounter],"\n");
+        fileCounter++;
+    }
+  
+    closedir(dir);
+
+    printf("Results:\n%s",subdirectories[1]);
+    printf("Action finished\n");
+
+    /*-----------------------------*/
+    int i;
+    for(i=0;i<subdirectoriesCount;i++ )
+    {
+        struct stat fileinfo;
+        FILE* plik;
+        long dl_pliku;
+        char *sciezka = subdirectories[i+2];
+        printf("%s", sciezka);
+        /*pobieram wielkosc pierwszego pliku*/
+        if (stat("./Database/Dupies/text.txt", &fileinfo) < 0)
+        {
+            printf("Cannot get file size\n");
+            return;
+        }
+        printf("File size: %ld\n", fileinfo.st_size);
+        
+        char fileSize[20];
+        sprintf(fileSize, "%ld", fileinfo.st_size);
+        if (send(clientDescriptior, fileSize, strlen(fileSize), 0) != strlen(fileSize))
+        {
+            printf("Couldn't send file size\n");
+            return;
+        }
+        printf("File size sent");
+        
+        /*recv ok po file size*/
+        if (recv(clientDescriptior, &buffer, 2,0) <= 0)
+        {
+            printf("recv nie powiodl sie\n");
+            return;
+        }
+        printf("Klient: %s\n", buffer);
+
+        /*Przesyłanie pliku*/
+        dl_pliku = fileinfo.st_size;
+        long bytesSent = 0;
+        unsigned char bufor[1024];
+
+        plik = fopen(sciezka, "rb");
+        if (plik == NULL)
+        {
+            printf("Couldn't acces the file\n");
+            return;
+        }
+        
+        while (bytesSent < dl_pliku)
+        {
+            long przeczytano = fread(&bufor, 1, 1024, plik);
+            long wyslano = send(clientDescriptior, &bufor, przeczytano, 0);
+            if (przeczytano != wyslano)
+                break;
+            bytesSent += wyslano;
+            printf("Potomny: wyslano %ld bajtow\n", bytesSent);
+            printf("Bufor: %s", bufor);
+        }
+        
+        if (bytesSent == dl_pliku)
+            printf("Potomny: plik wyslany poprawnie\n");
+        else
+            printf("Potomny: blad przy wysylaniu pliku\n");
+        fclose(plik);
+
+        /*recv ok po file*/
+        if (recv(clientDescriptior, &buffer, 2,0) <= 0)
+        {
+            printf("recv nie powiodl sie\n");
+            return;
+        }
+        printf("Klient: %s\n", buffer);
+    }
+    
+
+	return;
 }
 
 #pragma endregion
@@ -159,7 +311,7 @@ void WaitForCommand(int clientDescriptior, int clientID)
 
         if(command[0] == 'l')
         {
-            if(ReturnListOfAnimals(clientDescriptior,clientID)<0)
+            if(SendListOfAnimals(clientDescriptior,clientID)<0)
             {
                 printf("Error :(\n");
                 return;
@@ -202,7 +354,6 @@ int RunServerConnection(){
     
     printf("\n*** LISTENING ON PORT %d. SETTING QUEUE TO %d ***\n", PORT, MAXQUEUE);
     listen(serverSocketDescriptor, MAXQUEUE);
-    
     printf("\n*** STARTING INFINITE LOOP ***\n");
     printf("----------------------------------------\n");
     printf("( ͡° ͜ʖ ͡°) | Welcome. Call me Mr Jenkins. I will take care of your clients from now on.\n");
