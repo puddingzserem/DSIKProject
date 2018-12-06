@@ -4,17 +4,17 @@
 winexe
 C#
 .cs
-J:\DSIKProject\client\ClientApp\ClientApp\obj\Debug\
+j:\Desktop\PROJEKTSIECITUTAJ\DSIKProject\DSIKProject\client\ClientApp\ClientApp\obj\Debug\
 ClientApp
 none
 false
 DEBUG;TRACE
-J:\DSIKProject\client\ClientApp\ClientApp\App.xaml
-11151548125
+j:\Desktop\PROJEKTSIECITUTAJ\DSIKProject\DSIKProject\client\ClientApp\ClientApp\App.xaml
+21664481491
 
-71338143048
+71206910818
 14-1175798665
-MainWindow.xaml;
+MainWindow.xaml;Views\EntityView.xaml;
 
 False
 

@@ -7,16 +7,21 @@ using System.IO;
 
 namespace ClientApp.Models
 {
-    class Entity
+    public class Entity
     {
         private string entityName;
         private string entityDescriptionFilePath;
         private string entityImageFilePath;
         private string entityVideoFilePath;
+        bool isDownloaded=false;
 
         public Entity(string name)
         {
             entityName = name;
+        }
+        public void IsDownloaded()
+        {
+            isDownloaded  = true;
         }
         public void SetEntityDescription(string path)
         {

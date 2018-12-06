@@ -35,8 +35,6 @@ namespace ClientApp
         {
             InitializeComponent();
         }
-
-        #region server logic
         private void Connect(IPAddress serverIP, Int32 serverPort)
         {
             LogEvent($"*** Requested connecting to a server ***\nIP: {serverIP.ToString()}\nPort: {serverPort.ToString()}");
@@ -44,12 +42,10 @@ namespace ClientApp
             {
                 LogEvent("Connecting to server");
                 tcpClient.Connect(serverIP, serverPort);
-
-                // Get a client stream for reading and writing.
                 LogEvent("Initialising stream");
                 stream = tcpClient.GetStream();
                 GetListOfEntities();
-                DownloadEntity("Pies");
+                DownloadEntity("Dupies");
             }
             catch (ArgumentNullException e)
             {
@@ -65,108 +61,98 @@ namespace ClientApp
         private void SendMessage(string message)
         {
             LogEvent("*** Sending a message ***");
-
-            // Translate the passed message into ASCII and store it as a Byte array.
             Byte[] data = System.Text.Encoding.ASCII.GetBytes($"{message}");
-
-            // Send the message to the connected TcpServer. 
             stream.Write(data, 0, data.Length);
-
             LogEvent($"Sent: {message}");
+
         }
-        private string GetResponse()
+        private string GetResponse(int i)
         {
             LogEvent("*** Waiting for response ***");
 
-            // Buffer to store the response bytes.
-            Byte[] data = new Byte[256];
-
-            // String to store the response ASCII representation.
+            Byte[] data = new Byte[i];
             String responseData = String.Empty;
 
-            // Read the first batch of the TcpServer response bytes.
             Int32 bytes = stream.Read(data, 0, data.Length);
-            responseData = System.Text.Encoding.ASCII.GetString(data, 0, bytes);
+            responseData = System.Text.Encoding.ASCII.GetString(data, 0, i);
             LogEvent($"Received: {responseData}");
+            responseData = responseData.Replace("\0", string.Empty);
             return responseData;
         }
-        private bool Request(RequestActions requestActions, char action)
-        {
-            LogEvent($"*** Requested action {requestActions.ToString()} from server ***");
-
-            //Send info about request
-            SendMessage(action.ToString());
-
-            // Receive the TcpServer.response.
-            if (GetResponse().Contains("OK"))
-            {
-                LogEvent($"Initialising action {requestActions.ToString()}");
-                return true;
-            }
-            else
-            {
-                LogEvent($"Server denied action {requestActions.ToString()}");
-                return false;
-            }
-        }
-
-        #endregion
-
-        #region interaction logic
         private void GetListOfEntities()
         {
             SendMessage("l");
-            string entities = GetResponse();
-            //SendMessage("l");
-            //List<string> listOfEntities = new List<string>();
-            //while (!String.IsNullOrWhiteSpace(entities))
-            //{
-            //    var remainingString = entities.Substring(entities.LastIndexOf('\n') + 1);
-            //    string entity = entities.Substring(0, entities.LastIndexOf('\n'));
-            //    entities = remainingString;
-            //    listOfEntities.Add(entity);
-            //}
-            //ItemsListing.Items.Clear();
-            //foreach (string entity in listOfEntities)
-            //{
-            //    ItemsListing.Items.Add(entity);
-            //}
+            string entities = GetResponse(2048);
+            List<Entity> listOfEntities = new List<Entity>();
+            string[] entitiesArray = entities.Split('\n');
+
+            foreach (string entity in entitiesArray)
+            {
+                if (entity.Contains("."))
+                {
+                    continue;
+                }
+                listOfEntities.Add(new Entity(entity));
+            }
+            ItemsListing.Items.Clear();
+
+            foreach (Entity entity in listOfEntities)
+            {
+                ItemsListing.Items.Add(entity.GetEntityName());
+            }
+
         }
         private void DownloadEntity(string whichEntity)
         {
-            if (Request(RequestActions.DownloadAnimal,'d'))
+            SendMessage("d");
+            if (GetResponse(2).Contains("OK"))
             {
+                string filename = whichEntity;
+                string path = $"./_CacheDirectory/{whichEntity}";
                 SendMessage(whichEntity);
-                if (GetResponse().Contains("OK"))
-                {
-                    //int howManyFiles = Int32.Parse(GetResponse());
-                    //Directory.CreateDirectory($"./_CacheDirectory/{whichEntity}");
-                    SendMessage("Piesek");
-                    int wielkosc = int.Parse(GetResponse());
-                    //for(int i = 0; i < howManyFiles; i++)
-                    //{
-                    //    using (var output = File.Create("result.dat"))
-                    //    {
-                    //        LogEvent($"*** Receiving a file {i+1} of {howManyFiles} ***");
+                int howManyFiles = Int32.Parse(GetResponse(4));
 
-                    //        // read the file in chunks of 1KB
-                    //        var receivedFileBuffer = new byte[1024];
-                    //        int bytesRead;
-                    //        while ((bytesRead = stream.Read(receivedFileBuffer, 0, receivedFileBuffer.Length)) > 0)
-                    //        {
-                    //            output.Write(receivedFileBuffer, 0, bytesRead);
-                    //        }
-                    //    }
-                    //}
+                Directory.CreateDirectory(path);
+
+                for (int i = 0; i < howManyFiles; i++)
+                {
+                    switch (i)
+                    {
+                        case 0:
+                            filename = whichEntity + ".txt";
+                            break;
+                        case 1:
+                            filename = whichEntity + ".jpg";
+                            break;
+                        case 2:
+                            filename = whichEntity + ".mp4";
+                            break;
+                    }
+                    SendMessage("OK");
+
+                    long size = Int64.Parse(GetResponse(8));
+
+                    SendMessage("OK");
+
+
+                    LogEvent($"*** Receiving a file {i + 1} of {howManyFiles} ***");
+                    FileStream fs = new FileStream((path + "/" + filename), FileMode.OpenOrCreate);
+                    var receivedFileBuffer = new byte[size];
+                    byte[] buffer = null;
+                    while (size > 0)
+                    {
+                        buffer = new byte[1024];
+                        int partsize = stream.Read(buffer, 0, 1024);
+                        fs.Write(buffer, 0, partsize);
+                        size -= partsize;
+                    }
+
+                    System.Windows.MessageBox.Show("Plik odebrano");
                 }
-            }
-            SendMessage("Pie");
+            }       
+
         }
-        private void UploadEntity(Entity entity)
-        {
-            if (Request(RequestActions.UploadAnimal,'u'))
-                SendMessage("bedzie upload");
-        }
+
         private void DisconnectButtonClick(object sender, RoutedEventArgs e)
         {
             tcpClient.Close();
@@ -216,9 +202,7 @@ namespace ClientApp
             logs.Add(message);
             LogBox.Items.Add(message);
         }
-        #endregion
 
-        #region window logic
         private void SetDefaultWindowState()
         {
             IPAddressBox.IsEnabled = true;
@@ -305,14 +289,13 @@ namespace ClientApp
             if (!String.IsNullOrEmpty(video)) newObject.SetEntityVideo(video);
             Preview(newObject);
             ColorBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(253, 106, 2));
-            UploadEntity(newObject);
+            //UploadEntity(newObject);
         }
 
         private void ItemVideoButtonClick(object sender, RoutedEventArgs e)
         {
             System.Diagnostics.Process.Start(videoCache);
         }
-        #endregion
 
     }
 }
