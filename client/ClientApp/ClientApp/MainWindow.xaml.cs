@@ -67,7 +67,7 @@ namespace ClientApp
             LogEvent("*** Sending a message ***");
 
             // Translate the passed message into ASCII and store it as a Byte array.
-            Byte[] data = System.Text.Encoding.ASCII.GetBytes(message);
+            Byte[] data = System.Text.Encoding.ASCII.GetBytes($"{message}");
 
             // Send the message to the connected TcpServer. 
             stream.Write(data, 0, data.Length);
@@ -77,6 +77,7 @@ namespace ClientApp
         private string GetResponse()
         {
             LogEvent("*** Waiting for response ***");
+
             // Buffer to store the response bytes.
             Byte[] data = new Byte[256];
 
@@ -115,7 +116,21 @@ namespace ClientApp
         private void GetListOfEntities()
         {
             SendMessage("l");
-            GetResponse();
+            string entities = GetResponse();
+            //SendMessage("l");
+            //List<string> listOfEntities = new List<string>();
+            //while (!String.IsNullOrWhiteSpace(entities))
+            //{
+            //    var remainingString = entities.Substring(entities.LastIndexOf('\n') + 1);
+            //    string entity = entities.Substring(0, entities.LastIndexOf('\n'));
+            //    entities = remainingString;
+            //    listOfEntities.Add(entity);
+            //}
+            //ItemsListing.Items.Clear();
+            //foreach (string entity in listOfEntities)
+            //{
+            //    ItemsListing.Items.Add(entity);
+            //}
         }
         private void DownloadEntity(string whichEntity)
         {
@@ -126,7 +141,8 @@ namespace ClientApp
                 {
                     //int howManyFiles = Int32.Parse(GetResponse());
                     //Directory.CreateDirectory($"./_CacheDirectory/{whichEntity}");
-                    SendMessage("Pies");
+                    SendMessage("Piesek");
+                    int wielkosc = int.Parse(GetResponse());
                     //for(int i = 0; i < howManyFiles; i++)
                     //{
                     //    using (var output = File.Create("result.dat"))
@@ -144,7 +160,7 @@ namespace ClientApp
                     //}
                 }
             }
-            SendMessage("P");
+            SendMessage("Pie");
         }
         private void UploadEntity(Entity entity)
         {
