@@ -8,12 +8,14 @@
 #include <arpa/inet.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <time.h>
 
-#define PORT 2222
+#define PORT 7777
 #define MAXQUEUE 10
 
 #pragma region Database logic
+char ok[2] = "OK";
+FILE* file;
+struct stat fileinfo;
 void SetDatabase (){
     printf("\n*** Requested setting a database ***\n");
     char directory [200] = "./Database";
@@ -115,21 +117,30 @@ int ReturnListOfAnimals(int clientDescriptior, int clientID)
 
 void SendFiles(int clientDescriptior, int clientID)
 {
-	char name[512];
-	if (send(clientDescriptior, "OK", 2, 0) != 2)
+	char name[100];
+	char *path = "./Database/";
+	memset(name,0,100);
+	if (send(clientDescriptior, ok, sizeof(ok),0) != sizeof(ok))
 	{
 		printf("Pierwszy send nie powiodl sie");
 		return;
 	}
-	printf("Send powiodl sie");
-	if (recv(clientDescriptior, name, 512,0) <= 0)
+	printf("Wyslano \"OK\" \n");
+	if (recv(clientDescriptior, &name, 100,0) <= 0)
 	{
 		printf("recv nie powiodl sie\n");
 		return;
 	}
-	printf("DOSTALEM: %s\n", name);
-
-
+	printf("Klient chce pobrac: %s\n", name);
+	if (send(clientDescriptior, ok, sizeof(ok),0) != sizeof(ok))
+	{
+		printf("Trzeci send nie powiodl sie");
+		return;
+	}
+	printf("Wyslano \"OK\" po recv \n");
+	strcat(path, name);
+	printf("test");
+	
 }
 
 #pragma endregion
@@ -141,7 +152,8 @@ void WaitForCommand(int clientDescriptior, int clientID)
         printf("Czekam na decyzje od %d co robic\n", clientID);
         if(recv(clientDescriptior, command, 1,0) <=0)
         {
-            printf("Error :(\n");
+            printf("Polaczenie zerwane\n");
+			break;
         }
         printf("Klient uzyl komendy: %s\n", command);
 
@@ -165,7 +177,6 @@ void WaitForCommand(int clientDescriptior, int clientID)
 }
 
 int RunServerConnection(){
-
     int clientDescriptor;
     int serverSocketDescriptor = socket(AF_INET, SOCK_STREAM, 0);
     struct sockaddr_in address;
