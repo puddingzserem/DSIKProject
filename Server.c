@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include <time.h>
 
-#define PORT 7777
+#define PORT 2222
 #define MAXQUEUE 10
 
 #pragma region Database logic
@@ -50,24 +50,22 @@ int CreateFolder (char name []){
 }
 char *ReturnListOfItems(){
     printf("\n*** Action: Getting list of available items in database ***\n");
-    struct dirent *de; // Pointer for directory entry 
-    DIR *dr = opendir("./Database"); // opendir() returns a pointer of DIR type.
+    struct dirent *de;
+	DIR *dr = opendir("./Database");
 
-    if (dr == NULL)  // opendir returns NULL if couldn't open directory 
+    if (dr == NULL) 
     { 
         printf("Error: Could not access database. Aborting...\n"); 
         return "Error"; 
     } 
     printf("Accessed database\n");
 
-    //allocate memory for result
     char *subdirectories = malloc(2048);
     if(!subdirectories){
         printf("Error: Cannot allocate memory for the result. Aborting...\n");
         return "Error";
     }
 
-    //read directory content
     printf("Reading results\n");
     while ((de = readdir(dr)) != NULL){
         strcat(subdirectories,de->d_name); 
@@ -105,38 +103,43 @@ int ReturnListOfAnimals(int clientDescriptior, int clientID)
 {
     long fileLength;
     char* listOfItems = ReturnListOfItems();
-    int listSize = sizeof(listOfItems);
     char gotowosc[2];
-    
-    if(send(clientDescriptior, &listSize, sizeof(int),0) != sizeof(int)	)
+	printf("%s",listOfItems);
+    if(send(clientDescriptior, listOfItems, 2048,0) != 2048)
     {
-        printf("Pierwszy send nie powiodl sie :<\n");
-        return -1;
-    }
-    printf("Pierwszy send powiodl sie");
-
-    if(recv(clientDescriptior, &gotowosc, 2,0)<2)
-    {
-        printf("recv nie powiodl sie\n");
-        return -1;
-    }
-    if(send(clientDescriptior, &listOfItems, listSize,0) != sizeof(listOfItems))
-    {
-        printf("Drugi send blad chyba :<\n");
+        printf("Send listy nie powiodl sie :/\n");
         return -1;
     }
     return 0;
 }
 
+void SendFiles(int clientDescriptior, int clientID)
+{
+	char name[512];
+	if (send(clientDescriptior, "OK", 2, 0) != 2)
+	{
+		printf("Pierwszy send nie powiodl sie");
+		return;
+	}
+	printf("Send powiodl sie");
+	if (recv(clientDescriptior, name, 512,0) <= 0)
+	{
+		printf("recv nie powiodl sie\n");
+		return;
+	}
+	printf("DOSTALEM: %s\n", name);
+
+
+}
 
 #pragma endregion
 void WaitForCommand(int clientDescriptior, int clientID)
 {
-    char command[2];
+    char command[1];
     while(1)
     {
         printf("Czekam na decyzje od %d co robic\n", clientID);
-        if(recv(clientDescriptior, command, 2,0) <=0)
+        if(recv(clientDescriptior, command, 1,0) <=0)
         {
             printf("Error :(\n");
         }
@@ -154,14 +157,9 @@ void WaitForCommand(int clientDescriptior, int clientID)
         {
 
         }
-        if(command[0] == 'r')
+        if(command[0] == 'd')
         {
-            
-        }
-        if(command[0] == 'q')
-        {
-            printf("Wszystko oki, klient chce wyjsc(a przynajmniej miejmy taka nadzieje)\n");
-            return;
+			SendFiles(clientDescriptior, clientID);
         }
     }
 }

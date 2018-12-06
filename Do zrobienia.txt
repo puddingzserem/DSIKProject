@@ -1,0 +1,2 @@
+switch zamiast if
+zmiana rozmiaru bufora
