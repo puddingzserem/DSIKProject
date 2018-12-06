@@ -17,6 +17,7 @@ using ClientApp.Models;
 using System.Windows.Forms;
 using System.Net.Sockets;
 using System.Net;
+using ClientApp.Views;
 
 namespace ClientApp
 {
@@ -45,7 +46,7 @@ namespace ClientApp
                 LogEvent("Initialising stream");
                 stream = tcpClient.GetStream();
                 GetListOfEntities();
-                DownloadEntity("Dupies");
+                //DownloadEntity("Dupies");
             }
             catch (ArgumentNullException e)
             {
@@ -95,10 +96,25 @@ namespace ClientApp
                 listOfEntities.Add(new Entity(entity));
             }
             ItemsListing.Items.Clear();
+            List<string> cachedItems = new List<string>();
+            string[] stringCachedItems = Directory.GetDirectories("./_CacheDirectory").ToArray();
+            foreach(string str in stringCachedItems)
+            {
+                    cachedItems.Add(str.Substring(str.LastIndexOfAny(new char[] { '\\', '/' }) + 1));
+            }
+
 
             foreach (Entity entity in listOfEntities)
             {
-                ItemsListing.Items.Add(entity.GetEntityName());
+                if (!String.IsNullOrWhiteSpace(entity.GetEntityName()))
+                {
+                    if (cachedItems.Contains(entity.GetEntityName()))
+                    entity.IsDownloaded();
+                EntityView entityView = new EntityView(entity, this);
+                entityView.RefreshRequest += DoubleClick;
+                ItemsListing.Items.Add(entityView);
+
+                }
             }
 
         }
@@ -270,14 +286,11 @@ namespace ClientApp
                 videoCache = null;
             }
         }
-
-        private void UploadButtonClick(object sender, RoutedEventArgs e)
+        private Entity GetEntityDataFromDirectory(string path)
         {
-            LogEvent("Uploading entity data");
-            String pathToFiles = UploadFolderPath.Text;
-            String name = pathToFiles.Substring(pathToFiles.LastIndexOfAny(new char[] { '\\', '/' }) + 1);
+            String name = path.Substring(path.LastIndexOfAny(new char[] { '\\', '/' }) + 1);
             Entity newObject = new Entity(name);
-            List <string> files = Directory.GetFiles(pathToFiles).ToList();
+            List<string> files = Directory.GetFiles(path).ToList();
             //description
             string description = files.Find(p => p.Contains(".txt"));
             if (!String.IsNullOrEmpty(description)) newObject.SetEntityDescription(description);
@@ -287,14 +300,34 @@ namespace ClientApp
             //video
             string video = files.Find(p => p.Contains(".mp4"));
             if (!String.IsNullOrEmpty(video)) newObject.SetEntityVideo(video);
-            Preview(newObject);
+            return newObject;
+        }
+        private void UploadButtonClick(object sender, RoutedEventArgs e)
+        {
+            LogEvent("Uploading entity data");
+            String pathToFiles = UploadFolderPath.Text;
+
+            Preview(GetEntityDataFromDirectory(pathToFiles));
             ColorBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(253, 106, 2));
             //UploadEntity(newObject);
+            GetListOfEntities();
         }
 
         private void ItemVideoButtonClick(object sender, RoutedEventArgs e)
         {
             System.Diagnostics.Process.Start(videoCache);
+        }
+
+        private void DoubleClick(object sender, Entity entity)
+        {
+            if (entity.Downloaded())
+            {
+                try { Preview(GetEntityDataFromDirectory($"./_CacheDirectory/{entity.GetEntityName()}")); } catch { LogEvent("Couldn't get all animal data\n"); }
+            }
+            else
+            {
+                try { DownloadEntity(entity.GetEntityName()); } catch { LogEvent($"Error downloading {entity.GetEntityName()} from server"); }
+            }
         }
 
     }

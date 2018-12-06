@@ -69,5 +69,9 @@ namespace ClientApp.Models
             else
                 return null;
         }
+        public bool Downloaded()
+        {
+            return isDownloaded;
+        }
     }
 }

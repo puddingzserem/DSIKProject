@@ -4,15 +4,15 @@
 winexe
 C#
 .cs
-j:\Desktop\PROJEKTSIECITUTAJ\DSIKProject\DSIKProject\client\ClientApp\ClientApp\obj\Debug\
+J:\DSIKProject\client\ClientApp\ClientApp\obj\Debug\
 ClientApp
 none
 false
 DEBUG;TRACE
-j:\Desktop\PROJEKTSIECITUTAJ\DSIKProject\DSIKProject\client\ClientApp\ClientApp\App.xaml
+J:\DSIKProject\client\ClientApp\ClientApp\App.xaml
 21664481491
 
-111745437343
+11-16255770
 14-1175798665
 MainWindow.xaml;Views\EntityView.xaml;
 

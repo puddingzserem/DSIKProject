@@ -12,19 +12,37 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using ClientApp.Models;
 
-namespace ClientApp.Models
+namespace ClientApp.Views
 {
     /// <summary>
     /// Interaction logic for EntityView.xaml
     /// </summary>
     public partial class EntityView : UserControl
     {
-        public EntityView(Entity entity)
+        MainWindow mainWindow;
+        Entity entity;
+        public EntityView(Entity entity, MainWindow mainWindow)
         {
+            this.mainWindow = mainWindow;
+            this.entity = entity;
             InitializeComponent();
-            if(entity.IsDownloaded)
-                ItemStatus.Fill = 
+            if (entity.Downloaded())
+                ItemStatus.Fill = new SolidColorBrush(Color.FromRgb(10,200,50));
+            entityName.Text = entity.GetEntityName();
+        }
+
+        public delegate void RefreshRequestEventHandler(object sender, Entity entityInstance);
+        public event RefreshRequestEventHandler RefreshRequest;
+        private void RefreshRequestCall()
+        {
+            if (RefreshRequest != null)
+                RefreshRequest.Invoke(this, entity);
+        }
+        private void UserControlDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            RefreshRequestCall();
         }
     }
 }

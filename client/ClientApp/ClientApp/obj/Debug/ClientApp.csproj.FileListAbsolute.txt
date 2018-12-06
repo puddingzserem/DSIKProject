@@ -90,3 +90,5 @@ j:\Desktop\PROJEKTSIECITUTAJ\DSIKProject\DSIKProject\client\ClientApp\ClientApp\
 j:\Desktop\PROJEKTSIECITUTAJ\DSIKProject\DSIKProject\client\ClientApp\ClientApp\obj\Debug\ClientApp.pdb
 j:\Desktop\PROJEKTSIECITUTAJ\DSIKProject\DSIKProject\client\ClientApp\ClientApp\obj\Debug\Views\EntityView.g.cs
 j:\Desktop\PROJEKTSIECITUTAJ\DSIKProject\DSIKProject\client\ClientApp\ClientApp\obj\Debug\Views\EntityView.baml
+J:\DSIKProject\client\ClientApp\ClientApp\obj\Debug\Views\EntityView.g.cs
+J:\DSIKProject\client\ClientApp\ClientApp\obj\Debug\Views\EntityView.baml
