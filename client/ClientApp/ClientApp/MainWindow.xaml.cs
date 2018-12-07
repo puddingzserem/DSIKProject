@@ -17,6 +17,7 @@ using ClientApp.Models;
 using System.Windows.Forms;
 using System.Net.Sockets;
 using System.Net;
+using System.Text.RegularExpressions;
 using ClientApp.Views;
 
 namespace ClientApp
@@ -30,11 +31,13 @@ namespace ClientApp
         List<string> logs = new List<string>();
         TcpClient tcpClient = new TcpClient();
         NetworkStream stream;
+        string execPath;
 
 
         public MainWindow()
         {
             InitializeComponent();
+            execPath = System.IO.Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath);
         }
         private void Connect(IPAddress serverIP, Int32 serverPort)
         {
@@ -82,6 +85,7 @@ namespace ClientApp
         }
         private void GetListOfEntities()
         {
+            LogEvent("*** Requested list of available entities from server ***\n");
             SendMessage("l");
             string entities = GetResponse(2048);
             List<Entity> listOfEntities = new List<Entity>();
@@ -103,30 +107,38 @@ namespace ClientApp
                     cachedItems.Add(str.Substring(str.LastIndexOfAny(new char[] { '\\', '/' }) + 1));
             }
 
+            LogEvent("Checking available entities with cache\n");
+            var regex = new Regex(@"^[a-zA-Z]+$");
 
             foreach (Entity entity in listOfEntities)
             {
-                if (!String.IsNullOrWhiteSpace(entity.GetEntityName()))
+                Match match = regex.Match(entity.GetEntityName());
+                if (match.Success)
                 {
                     if (cachedItems.Contains(entity.GetEntityName()))
-                    entity.IsDownloaded();
-                EntityView entityView = new EntityView(entity, this);
-                entityView.RefreshRequest += DoubleClick;
-                ItemsListing.Items.Add(entityView);
-
+                        entity.IsDownloaded();
+                    EntityView entityView = new EntityView(entity, this);
+                    entityView.RefreshRequest += DoubleClick;
+                    ItemsListing.Items.Add(entityView);
                 }
             }
 
         }
         private void DownloadEntity(string whichEntity)
         {
+            LogEvent("*** Requested download ***\n");
             SendMessage("d");
             if (GetResponse(2).Contains("OK"))
             {
+                LogEvent("Server waiting for specification\n");
                 string filename = whichEntity;
                 string path = $"./_CacheDirectory/{whichEntity}";
+
+                LogEvent($"Waiting for info about {whichEntity}\n");
                 SendMessage(whichEntity);
+
                 int howManyFiles = Int32.Parse(GetResponse(4));
+                LogEvent($"Will receive {howManyFiles} files\n");
 
                 Directory.CreateDirectory(path);
 
@@ -146,31 +158,44 @@ namespace ClientApp
                     }
                     SendMessage("OK");
 
-                    long size = Int64.Parse(GetResponse(8));
+                    long size = Int64.Parse(GetResponse(20));
 
                     SendMessage("OK");
 
 
                     LogEvent($"*** Receiving a file {i + 1} of {howManyFiles} ***");
-                    FileStream fs = new FileStream((path + "/" + filename), FileMode.OpenOrCreate);
-                    var receivedFileBuffer = new byte[size];
-                    byte[] buffer = null;
-                    while (size > 0)
+                    using (FileStream fs = new FileStream((path + "/" + filename), FileMode.OpenOrCreate))
                     {
-                        buffer = new byte[1024];
-                        int partsize = stream.Read(buffer, 0, 1024);
-                        fs.Write(buffer, 0, partsize);
-                        size -= partsize;
-                    }
+                        var receivedFileBuffer = new byte[size];
+                        byte[] buffer = null;
+                        while (size > 0)
+                        {
+                            buffer = new byte[1024];
+                            int partsize = stream.Read(buffer, 0, 1024);
+                            fs.Write(buffer, 0, partsize);
+                            size -= partsize;
+                        }
 
-                    System.Windows.MessageBox.Show("Plik odebrano");
+                        System.Windows.MessageBox.Show("File received\n");
+                    }
+                    
+                    
                 }
-            }       
+                SendMessage("OK");
+            }
+            //Preview(GetEntityDataFromDirectory($".\\_CacheDirectory\\{whichEntity}"));
+            try { Preview(GetEntityDataFromDirectory($"./_CacheDirectory/{whichEntity}")); } catch { LogEvent("Couldn't get all animal data\n"); }
+            GetListOfEntities();
+
+        }
+        private void UploadEntity(Entity entity)
+        {
 
         }
 
         private void DisconnectButtonClick(object sender, RoutedEventArgs e)
         {
+            LogEvent("Disconnecting...\n");
             tcpClient.Close();
             SetDefaultWindowState();
             Environment.Exit(0);
@@ -206,6 +231,8 @@ namespace ClientApp
                 ConnectButton.IsEnabled = false;
                 SearchButton.IsEnabled = true;
                 UploadFolderPath.IsEnabled = true;
+                ServerMessageBox.IsEnabled = true;
+                SendMessageButton.IsEnabled = true;
                 ServerBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(0, 200, 108));
 
                 CreateCache();
@@ -230,6 +257,8 @@ namespace ClientApp
             ConnectButton.IsEnabled = true;
             IPAddressBox.IsEnabled = true;
             PortBox.IsEnabled = true;
+            ServerMessageBox.IsEnabled = false;
+            SendMessageButton.IsEnabled = false;
             DisconnectButton.IsEnabled = false;
         }
 
@@ -265,12 +294,13 @@ namespace ClientApp
             else
                 ItemName.Text = null;
             if (!String.IsNullOrEmpty(entityObject.GetEntityDescription()))
-                ItemDescription.Text = File.ReadAllText(entityObject.GetEntityDescription());
+                ItemDescription.Text = File.ReadAllText(entityObject.GetEntityDescription(), Encoding.Default);
             else
                 ItemDescription.Text = null;
             if (!String.IsNullOrEmpty(entityObject.GetEntityImage()))
             {
-                var uriSource = new Uri(entityObject.GetEntityImage());
+                string path = execPath+"\\_CacheDirectory\\"+entityObject.GetEntityName()+"\\"+ entityObject.GetEntityImage().Substring(entityObject.GetEntityImage().LastIndexOfAny(new char[] { '\\', '/' }) + 1);
+                var uriSource = new Uri(path);
                 ItemThumbnail.Source = new BitmapImage(uriSource);
             }
             else
@@ -306,10 +336,10 @@ namespace ClientApp
         {
             LogEvent("Uploading entity data");
             String pathToFiles = UploadFolderPath.Text;
-
-            Preview(GetEntityDataFromDirectory(pathToFiles));
+            Entity entity = GetEntityDataFromDirectory(pathToFiles);
+            Preview(entity);
             ColorBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(253, 106, 2));
-            //UploadEntity(newObject);
+            UploadEntity(entity);
             GetListOfEntities();
         }
 
@@ -322,13 +352,19 @@ namespace ClientApp
         {
             if (entity.Downloaded())
             {
-                try { Preview(GetEntityDataFromDirectory($"./_CacheDirectory/{entity.GetEntityName()}")); } catch { LogEvent("Couldn't get all animal data\n"); }
+                try { Preview(GetEntityDataFromDirectory($".\\_CacheDirectory\\{entity.GetEntityName()}")); } catch { LogEvent("Couldn't get all animal data\n"); }
             }
             else
             {
+                //DownloadEntity(entity.GetEntityName());
                 try { DownloadEntity(entity.GetEntityName()); } catch { LogEvent($"Error downloading {entity.GetEntityName()} from server"); }
             }
         }
 
+        private void SendMessageButtonClick(object sender, RoutedEventArgs e)
+        {
+            if (!String.IsNullOrEmpty(ServerMessageBox.Text))
+                SendMessage(ServerMessageBox.Text);
+        }
     }
 }

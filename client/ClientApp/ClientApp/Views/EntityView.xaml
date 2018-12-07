@@ -7,7 +7,7 @@
              mc:Ignorable="d" 
              MouseDoubleClick="UserControlDoubleClick"
              d:DesignHeight="20" d:DesignWidth="100">
-    <Grid>
+    <Grid Background="#FFF4F4F4" Width="100">
         <Rectangle Name="ItemStatus" Fill="#DD9900" HorizontalAlignment="Left" Height="20" VerticalAlignment="Top" Width="3"/>
         <TextBlock x:Name="entityName" HorizontalAlignment="Left" Margin="7,2,0,0" TextWrapping="Wrap" Text="TextBlock" VerticalAlignment="Top"/>
     </Grid>
