@@ -190,6 +190,62 @@ namespace ClientApp
         }
         private void UploadEntity(Entity entity)
         {
+            string[] path = new string[3];
+            long[] size = new long[3];
+            int i=0;
+            SendMessage("s");
+            GetResponse(2);
+            SendMessage(entity.GetEntityName());
+            GetResponse(2);
+
+
+            if (entity.GetEntityDescription() != null)
+            {
+                path[0] = entity.GetEntityDescription();
+                size[0] = new System.IO.FileInfo(path[0]).Length;
+ 
+                i++;
+            }
+            if (entity.GetEntityImage() != null)
+            {
+                path[1] = entity.GetEntityImage();
+                size[1] = new System.IO.FileInfo(path[1]).Length;
+
+                i++;
+            }
+            if (entity.GetEntityVideo() != null)
+            {
+                path[2] = entity.GetEntityVideo();
+                size[2] = new System.IO.FileInfo(path[2]).Length;
+
+                i++;
+            }
+
+            SendMessage(i.ToString());
+            GetResponse(2);
+            for(int j=0; j<i; j++)
+            {
+                byte[] data = File.ReadAllBytes(path[j]);
+                byte[] dataLength = BitConverter.GetBytes(data.Length);
+                int bufferSize = 1024;
+                SendMessage(size[j].ToString());
+                GetResponse(2);
+
+                int bytesSent = 0;
+                int bytesLeft = data.Length;
+
+                while (bytesLeft > 0)
+                {
+                    int curDataSize = Math.Min(bufferSize, bytesLeft);
+                    stream.Write(data, bytesSent, curDataSize);
+                    bytesSent += curDataSize;
+                    bytesLeft -= curDataSize;
+                }
+
+                GetResponse(2);
+
+            }
+
 
         }
 
@@ -337,7 +393,7 @@ namespace ClientApp
             LogEvent("Uploading entity data");
             String pathToFiles = UploadFolderPath.Text;
             Entity entity = GetEntityDataFromDirectory(pathToFiles);
-            Preview(entity);
+            //Preview(entity);
             ColorBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(253, 106, 2));
             UploadEntity(entity);
             GetListOfEntities();

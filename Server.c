@@ -11,14 +11,11 @@
 #include <stdint.h>
 
 #define PORT 7777
-
 #define MAXQUEUE 10
 
-#pragma region Database logic
+
 char ok[2] = "OK";
 
-//FILE* file;
-//struct stat fileinfo;
 
 void SetDatabase (){
     printf("\n*** Requested setting a database ***\n");
@@ -37,7 +34,7 @@ void SetDatabase (){
 }
 int CreateFolder (char name []){
     printf("\n*** Requested creating a new folder ***\nFolder name: %s\n", name);
-    char directory [200] = "./Database/%s";
+    char directory [200] = "./Database/";
     strcat(directory, name);
     printf("Creating a directory under %s\n", directory);
     int code = mkdir(directory, S_IRWXU | S_IRWXG | S_IRWXO);
@@ -116,8 +113,97 @@ int SendListOfAnimals(int clientDescriptior, int clientID){
     printf("Action finished\n");
     return 0;
 }
-void SendFiles(int clientDescriptior, int clientID)
-{
+void ReceiveFiles(int clientDescriptior, int clientID){
+	char databasePath[12] = "./Database/";
+	char path[512];
+	char name[100];
+	char liczby[20];
+	int filesCount;
+	long size, odebrano, odebrano_razem;
+	char bufor[1025];
+	int i;
+	
+	if(send(clientDescriptior, ok, sizeof(ok),0) != sizeof(ok)){
+		printf("Error: Couldn't send confirmation to client %d. Aborting...\n", clientID);
+		return;
+	}
+	memset(name, '\0', 100);
+	if(recv(clientDescriptior, &name, 100,0) <= 0)	{
+		printf("recv nie powiodl sie\n");
+		return;
+	}
+	printf("Otrzymano zwierzatko %s \n", name);
+	if(CreateFolder(name)<0){
+		printf("Blad przy tworzeniu folderu\n");
+		return;
+	}
+	
+	if (send(clientDescriptior, ok, sizeof(ok),0) != sizeof(ok)){
+			printf("Error: Couldn't send confirmation to client %d. Aborting...\n", clientID);
+		return;
+	}
+	if(recv(clientDescriptior, &liczby, 20, 0) <=0){
+		printf("recv nie powiodl sie \n");
+		return;
+	}
+	
+	filesCount = atoi(liczby);
+	if (send(clientDescriptior, ok, sizeof(ok),0) != sizeof(ok)){
+			printf("Error: Couldn't send confirmation to client %d. Aborting...\n", clientID);
+		return;
+	}
+	printf("Otrzymam %d plikow \n", filesCount);
+	for(i=0;i<filesCount;i++){
+		FILE *fp;
+		memset(liczby, '\0',20);
+		if(recv(clientDescriptior, &liczby, 20, 0) <=0){
+			printf("recv nie powiodl sie \n");
+			return;
+		}
+		size = atoi(liczby);
+		if (send(clientDescriptior, ok, sizeof(ok),0) != sizeof(ok)){
+			printf("Error: Couldn't send confirmation to client %d. Aborting...\n", clientID);
+		return;
+	}
+		memset(path, 0, 512);
+		switch(i){
+			case 0:
+				sprintf(path, "%s%s/%s.txt", databasePath,name, name);
+			break;
+			
+			case 1:
+				sprintf(path, "%s%s/%s.jpg", databasePath,name,name);
+			break;
+			
+			case 2:
+				sprintf(path, "%s%s/%s.mp4", databasePath,name,name);
+			break;		
+		}
+		printf("Plik nr %d ma dlugosc: %ld\n", i,size);
+		odebrano_razem=0;
+		fp=fopen(path, "w");
+    while (odebrano_razem < size)
+    {
+        memset(bufor, 0, 1025);
+        odebrano = recv(clientDescriptior, bufor, 1024, 0);
+        if (odebrano < 0)
+            break;
+        odebrano_razem += odebrano;
+		if(i==0)
+			fwrite(bufor, 1,strlen(bufor), fp);
+		else
+			fwrite(bufor, 1,1024, fp);
+    }
+		fclose(fp);
+		if (send(clientDescriptior, ok, sizeof(ok),0) != sizeof(ok)){
+			printf("Error: Couldn't send confirmation to client %d. Aborting...\n", clientID);
+		return;
+	}
+	}
+	
+return;
+}
+void SendFiles(int clientDescriptior, int clientID){
     printf("\n*** Action: Send files to client %d ***\n", clientID);
     printf("Creating buffers\n");
     char buffer[2];
@@ -126,16 +212,14 @@ void SendFiles(int clientDescriptior, int clientID)
 	memset(name,0,100);
 
     /*OK na d*/
-	if (send(clientDescriptior, ok, sizeof(ok),0) != sizeof(ok))
-	{
+	if (send(clientDescriptior, ok, sizeof(ok),0) != sizeof(ok)){
 		printf("Error: Couldn't send confirmation to client %d. Aborting...\n", clientID);
 		return;
 	}
 	printf("Wyslano \"OK\" \n");
 
     /*recv na zwierze*/
-	if (recv(clientDescriptior, &name, 100,0) <= 0)
-	{
+	if (recv(clientDescriptior, &name, 100,0) <= 0)	{
 		printf("recv nie powiodl sie\n");
 		return;
 	}
@@ -149,8 +233,7 @@ void SendFiles(int clientDescriptior, int clientID)
     struct dirent *de;
 	DIR *dr = opendir(directory);
 
-    if (dr == NULL) 
-    { 
+    if (dr == NULL)  { 
         printf("Error: Could not access folder. Aborting...\n"); 
         return; 
     } 
@@ -170,16 +253,14 @@ void SendFiles(int clientDescriptior, int clientID)
     sprintf(subdirCount, "%d", subdirectoriesCount);
     
     /*printf("SIZE OF INT %ld",sizeof(int32_t));*/
-    if (send(clientDescriptior, subdirCount, 2,0) != 2)
-	{
+    if (send(clientDescriptior, subdirCount, 2,0) != 2)	{
 		printf("Couldn't send file count\n");
 		return;
 	}
     else{ printf("File count sent\n"); }
 
     /*recv ok po file count*/
-	if (recv(clientDescriptior, &buffer, 2,0) <= 0)
-	{
+	if (recv(clientDescriptior, &buffer, 2,0) <= 0)	{
 		printf("recv nie powiodl sie\n");
 		return;
 	}
@@ -190,8 +271,7 @@ void SendFiles(int clientDescriptior, int clientID)
     char pathToFiles[100];
     sprintf(pathToFiles,"./Database/%s",name);
 	DIR *dir = opendir(pathToFiles);
-    if (dir == NULL) 
-    { 
+    if (dir == NULL)     { 
         printf("Error: Could not access files. Aborting...\n"); 
         return; 
     } 
@@ -204,7 +284,7 @@ void SendFiles(int clientDescriptior, int clientID)
         return;
     }
 
-    printf("Reading results\n");
+    printf("Reading resultst\n");
     int fileCounter=0;
     while ((de = readdir(dir)) != NULL){
         strcat(subdirectories[fileCounter],pathToFiles);
@@ -216,21 +296,21 @@ void SendFiles(int clientDescriptior, int clientID)
   
     closedir(dir);
 
-    printf("Results:\n%s",subdirectories[1]);
-    printf("Action finished\n");
-
-    /*-----------------------------*/
+	printf(" %d \n", subdirectoriesCount);
     int i;
-    for(i=0;i<subdirectoriesCount;i++ )
-    {
+    for(i=0;i<subdirectoriesCount;i++ )    {
         struct stat fileinfo;
         FILE* plik;
         long dl_pliku;
-        char *sciezka = subdirectories[i+2];
-        printf("%s", sciezka);
-        /*pobieram wielkosc pierwszego pliku*/
-        if (stat("./Database/Dupies/text.txt", &fileinfo) < 0)
-        {
+        char sciezka[100];
+		
+		switch(i){
+			case 0:sprintf(sciezka,"%s/%s.txt", pathToFiles, name); break;
+			case 1:sprintf(sciezka,"%s/%s.jpg", pathToFiles, name); break;
+			case 2:sprintf(sciezka,"%s/%s.mp4", pathToFiles, name); break;
+		}
+        
+        if (stat(sciezka, &fileinfo) < 0)        {
             printf("Cannot get file size\n");
             return;
         }
@@ -238,16 +318,14 @@ void SendFiles(int clientDescriptior, int clientID)
         
         char fileSize[20];
         sprintf(fileSize, "%ld", fileinfo.st_size);
-        if (send(clientDescriptior, fileSize, strlen(fileSize), 0) != strlen(fileSize))
-        {
+        if (send(clientDescriptior, fileSize, strlen(fileSize), 0) != strlen(fileSize))        {
             printf("Couldn't send file size\n");
             return;
         }
-        printf("File size sent");
+        printf("File size sent\n");
         
         /*recv ok po file size*/
-        if (recv(clientDescriptior, &buffer, 2,0) <= 0)
-        {
+        if (recv(clientDescriptior, &buffer, 2,0) <= 0)        {
             printf("recv nie powiodl sie\n");
             return;
         }
@@ -273,7 +351,6 @@ void SendFiles(int clientDescriptior, int clientID)
                 break;
             bytesSent += wyslano;
             printf("Potomny: wyslano %ld bajtow\n", bytesSent);
-            printf("Bufor: %s", bufor);
         }
         
         if (bytesSent == dl_pliku)
@@ -295,9 +372,7 @@ void SendFiles(int clientDescriptior, int clientID)
 	return;
 }
 
-#pragma endregion
-void WaitForCommand(int clientDescriptior, int clientID)
-{
+void WaitForCommand(int clientDescriptior, int clientID){
     char command[1];
     while(1)
     {
@@ -319,7 +394,7 @@ void WaitForCommand(int clientDescriptior, int clientID)
         }
         if(command[0] == 's')
         {
-
+			ReceiveFiles(clientDescriptior, clientID);
         }
         if(command[0] == 'd')
         {
@@ -401,12 +476,8 @@ int RunServerConnection(){
     return 0;
 }
 
-#pragma endregion
 
-#pragma region User Interaction logic
-#pragma endregion
-int main()
-{
+int main(){
     printf("Starting server side C application\n");
     RunServerConnection();
 
